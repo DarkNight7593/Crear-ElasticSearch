@@ -1,0 +1,83 @@
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "autocomplete_analyzer": {
+          "tokenizer": "autocomplete_tokenizer",
+          "filter": ["lowercase"]
+        }
+      },
+      "tokenizer": {
+        "autocomplete_tokenizer": {
+          "type": "edge_ngram",
+          "min_gram": 1,
+          "max_gram": 20,
+          "token_chars": ["letter", "digit"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "curso_id": {
+        "type": "keyword"
+      },
+      "tenant_id": {
+        "type": "keyword"
+      },
+      "nombre": {
+        "type": "text"
+      },
+      "descripcion": {
+        "type": "text",
+        "analyzer": "standard",
+        "fields": {
+          "fuzzy": {
+            "type": "text"
+          },
+          "prefix": {
+            "type": "text",
+            "analyzer": "autocomplete_analyzer"
+          },
+          "suggest": {
+            "type": "completion"
+          }
+        }
+      },
+      "inicio": {
+        "type": "date",
+        "format": "yyyy-MM-dd"
+      },
+      "fin": {
+        "type": "date",
+        "format": "yyyy-MM-dd"
+      },
+      "precio": {
+        "type": "float"
+      },
+      "horarios": {
+        "type": "nested",
+        "properties": {
+          "horario_id": {
+            "type": "keyword"
+          },
+          "dias": {
+            "type": "keyword"
+          },
+          "inicio_hora": {
+            "type": "keyword"
+          },
+          "fin_hora": {
+            "type": "keyword"
+          },
+          "inicio_hora_min": {
+            "type": "integer"
+          },
+          "fin_hora_min": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  }
+}
