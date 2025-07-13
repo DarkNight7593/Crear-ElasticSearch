@@ -50,7 +50,7 @@ def crear_tenant(req: TenantRequest):
         ], check=True)
 
         # Esperar a que el servicio de Elasticsearch esté disponible
-        for intento in range(10):
+        for intento in range(20):
             try:
                 res = requests.get(f"http://localhost:{puerto}")
                 if res.status_code == 200:
