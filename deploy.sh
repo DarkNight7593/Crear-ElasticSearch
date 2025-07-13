@@ -20,6 +20,7 @@ source venv/bin/activate
 if [ ! -f "requirements.txt" ]; then
   echo "fastapi" > requirements.txt
   echo "uvicorn" >> requirements.txt
+  echo "requests" >> requirements.txt
 fi
 
 echo -e "${GREEN}⬇️ Instalando dependencias...${NC}"
