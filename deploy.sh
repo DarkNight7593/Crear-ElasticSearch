@@ -16,7 +16,7 @@ fi
 # Activar entorno virtual
 source venv/bin/activate
 
-# Instalar dependencias si falta alguna
+# Crear requirements.txt si no existe
 if [ ! -f "requirements.txt" ]; then
   echo "fastapi" > requirements.txt
   echo "uvicorn" >> requirements.txt
@@ -26,6 +26,33 @@ fi
 echo -e "${GREEN}⬇️ Instalando dependencias...${NC}"
 pip install -r requirements.txt
 
-# Ejecutar Uvicorn
-echo -e "${GREEN}▶️ Ejecutando servidor Uvicorn en 0.0.0.0:8080...${NC}"
-uvicorn main:app --host 0.0.0.0 --port 8080
+# Crear archivo systemd para iniciar automáticamente en reboot
+SERVICE_PATH="/etc/systemd/system/fastapi.service"
+APP_DIR=$(pwd)
+VENV_PATH="$APP_DIR/venv/bin"
+
+echo -e "${GREEN}🛠️ Creando archivo de servicio systemd...${NC}"
+
+sudo bash -c "cat > $SERVICE_PATH" <<EOF
+[Unit]
+Description=FastAPI service
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=$APP_DIR
+ExecStart=$VENV_PATH/uvicorn main:app --host 0.0.0.0 --port 8080
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Recargar systemd y habilitar servicio
+echo -e "${GREEN}🔄 Recargando y habilitando servicio...${NC}"
+sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
+sudo systemctl enable fastapi.service
+sudo systemctl restart fastapi.service
+
+echo -e "${GREEN}✅ FastAPI desplegada correctamente y configurada para reiniciarse automáticamente${NC}"
