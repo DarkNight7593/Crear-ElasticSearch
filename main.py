@@ -1,6 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import subprocess
+import json
+import requests
+import time
+import os
 
 app = FastAPI()
 
@@ -15,6 +19,22 @@ def crear_tenant(req: TenantRequest):
     puerto = req.puerto
 
     try:
+        # Verificar si el contenedor ya existe
+        resultado = subprocess.run(
+            ["docker", "ps", "-a", "--format", "{{.Names}}"],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        contenedores = resultado.stdout.strip().split("\n")
+
+        if nombre_contenedor in contenedores:
+            return {
+                "message": f"El contenedor '{nombre_contenedor}' ya existe. Proceso omitido.",
+                "puerto": puerto,
+                "tenant": req.tenant
+            }
+
         # Lanzar contenedor Docker
         subprocess.run([
             "docker", "run", "-d",
@@ -27,14 +47,37 @@ def crear_tenant(req: TenantRequest):
             "docker.elastic.co/elasticsearch/elasticsearch:7.17.13"
         ], check=True)
 
-        # Crear índice en Elasticsearch
-        subprocess.run([
-            "curl", "-X", "PUT", f"http://localhost:{puerto}/cursos",
-            "-H", "Content-Type: application/json",
-            "-d", "@indice_cursos.json"
-        ], check=True)
+        # Esperar a que Elasticsearch esté listo
+        for _ in range(10):
+            try:
+                res = requests.get(f"http://localhost:{puerto}")
+                if res.status_code == 200:
+                    break
+            except requests.exceptions.ConnectionError:
+                time.sleep(3)
+        else:
+            raise HTTPException(status_code=500, detail="Elasticsearch no respondió después de 30 segundos")
 
-        return { "message": f"Tenant {req.tenant} creado en puerto {puerto}" }
+        # Cargar el índice desde archivo
+        ruta_json = os.path.join(os.path.dirname(__file__), "indice_cursos.json")
+        with open(ruta_json, 'r') as f:
+            indice = json.load(f)
+
+        # Crear índice en Elasticsearch
+        resp = requests.put(
+            f"http://localhost:{puerto}/cursos",
+            headers={"Content-Type": "application/json"},
+            json=indice
+        )
+
+        if resp.status_code >= 300:
+            raise HTTPException(status_code=500, detail=f"Error al crear índice: {resp.text}")
+
+        return {
+            "message": f"Tenant '{req.tenant}' creado exitosamente en puerto {puerto}"
+        }
 
     except subprocess.CalledProcessError as e:
-        raise HTTPException(status_code=500, detail=f"Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al ejecutar Docker: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
