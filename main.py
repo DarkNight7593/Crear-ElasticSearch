@@ -37,13 +37,20 @@ def crear_tenant(req: TenantRequest):
         os.makedirs(data_path, exist_ok=True)
         subprocess.run(["sudo", "chown", "-R", "1000:1000", data_path], check=True)
 
-        # Lanzar contenedor
+        # Lanzar contenedor con límites de recursos
         subprocess.run([
             "docker", "run", "-d",
             "--name", nombre_contenedor,
             "--restart=always",
+            "--memory=1g",                    # Limitar a 1 GB RAM total
+            "--cpus=0.6",                     # Limitar a 0.6 CPU
+            "--memory-swappiness=0",         # Evitar uso de swap
             "-e", "discovery.type=single-node",
             "-e", "network.host=0.0.0.0",
+            "-e", "xpack.ml.enabled=false",       # Desactiva módulos no usados
+            "-e", "xpack.security.enabled=false",
+            "-e", "xpack.monitoring.enabled=false",
+            "-e", "ES_JAVA_OPTS=-Xms512m -Xmx512m",  # Heap de Java: 512 MB fijos
             "-p", f"{puerto}:9200",
             "-v", f"{data_path}:/usr/share/elasticsearch/data",
             "docker.elastic.co/elasticsearch/elasticsearch:7.17.13"
