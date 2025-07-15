@@ -42,19 +42,27 @@ def crear_tenant(req: TenantRequest):
             "docker", "run", "-d",
             "--name", nombre_contenedor,
             "--restart=always",
-            "--memory=1g",                    # Limitar a 1 GB RAM total
-            "--cpus=0.6",                     # Limitar a 0.6 CPU
-            "--memory-swappiness=0",         # Evitar uso de swap
+            "--memory=1g",
+            "--cpus=0.6",
+            "--memory-swappiness=0",
             "-e", "discovery.type=single-node",
             "-e", "network.host=0.0.0.0",
-            "-e", "xpack.ml.enabled=false",       # Desactiva módulos no usados
+            "-e", "xpack.ml.enabled=false",
             "-e", "xpack.security.enabled=false",
             "-e", "xpack.monitoring.enabled=false",
-            "-e", "ES_JAVA_OPTS=-Xms512m -Xmx512m",  # Heap de Java: 512 MB fijos
+            "-e", "ES_JAVA_OPTS=-Xms512m -Xmx512m",
+        
+            # 👇 CORS habilitado
+            "-e", "http.cors.enabled=true",
+            "-e", "http.cors.allow-origin=*",
+            "-e", "http.cors.allow-methods=OPTIONS, HEAD, GET, POST, PUT, DELETE",
+            "-e", "http.cors.allow-headers=*",  
+        
             "-p", f"{puerto}:9200",
             "-v", f"{data_path}:/usr/share/elasticsearch/data",
             "docker.elastic.co/elasticsearch/elasticsearch:7.17.13"
         ], check=True)
+
 
         # Esperar a que el servicio de Elasticsearch esté disponible
         for intento in range(50):
